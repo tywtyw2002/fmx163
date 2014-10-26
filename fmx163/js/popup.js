@@ -11,6 +11,11 @@ function( config,   $){
         } else {
             $('select[name="enabled"]').val('off');
         }
+        if (config.html5enabled) {
+            $('select[name="html5enabled"]').val('on');
+        } else {
+            $('select[name="html5enabled"]').val('off');
+        }
         current_config = config;
     });
 
@@ -27,6 +32,12 @@ function( config,   $){
         var enabled = true;
         if ($('select[name="enabled"]').val() === 'off') enabled = false;
         current_config['enabled'] = enabled;
+        config.save_config(current_config);
+    });
+    $('select[name="html5enabled"]').bind('change', function(){
+        var enabled = true;
+        if ($('select[name="html5enabled"]').val() === 'off') enabled = false;
+        current_config['html5enabled'] = enabled;
         config.save_config(current_config);
     });
 
