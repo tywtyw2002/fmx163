@@ -68,8 +68,8 @@ return {
                     if (!song_info['bMusic']) return;
                     var len = song_info['bMusic']['playTime'] / 1000;
 
-                    console.log('Checking music length ', song['len'], len);
-                    if (Math.abs(len - song['len']) <= SECONDS_JITTER) {
+                    console.log('Checking music length ', song['length'], len);
+                    if (Math.abs(len - song['length']) <= SECONDS_JITTER) {
                         matched_song_info = song_info;
                         return false;
                     }
@@ -104,7 +104,7 @@ return {
             url: API_SONG_SEARCH,
             data: {
                 type: '1',
-                s: song.song + ' ' + song.artist,
+                s: song.title + ' ' + song.artist,
                 offset: '0',
                 limit: '30'
             }, 

@@ -1,4 +1,5 @@
-(function(){
+//define(['jquery', 'window'],function($, window){
+(function (){
     var makeRandomString = function (length) {
         var text = "";
         var possible = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -8,17 +9,64 @@
     };
 
 
-var new_DBR = {
-    act: function(u, s) {
-        console.log(u,s);
-        if(u == "switch"){
-            window.doubanfm.changeCH(s);
-        }
-    },
-};
+    var new_DBR = {
+        act: function(u, s) {
+            console.log(u,s);
+            if(u == "switch"){
+                document.dispatchEvent(new CustomEvent('douban_channel_changed', {
+                    detail: {id: s},
+                }));
+                window.doubanfm.changeCH(s);
+            }
+        },
+    };
 
 
     var doubanfmhtml5 = {
+        query: function(x){
+            if ( typeof x === 'undefined'){
+                x = 0;
+            }
+            document.dispatchEvent(new CustomEvent('douban_query', {
+                detail: {song: this.songList[x]},
+            }));
+        },
+
+        set_volume: function(e){
+            this.volume = e;
+            localStorage.setItem("douban_volume", e);
+            if (typeof this.el.mp3 !== "undefined"){
+                this.el.mp3.volume = e;
+            }
+            //set icons
+            if (e >= 0.5){
+                $(".r_volume").css("background", "url(http://static.srv.c70.io/img/volume_hi.svg)");
+            }else if (e > 0){
+                $(".r_volume").css("background", "url(http://static.srv.c70.io/img/volume_low.svg)");
+            }else{
+                $(".r_volume").css("background", "url(http://static.srv.c70.io/img/volume.svg)");
+            }
+        },
+
+        init_volume: function(){
+            l = localStorage.getItem("douban_volume");
+            if (typeof l !== "string"){
+                console.log("Init volume.");
+                l = 1.0;
+            }else{
+                l = parseFloat(l);
+            }
+
+            this.volume = l;
+            //set volume bar;
+            $("#v_progress").width(50 * l);
+            if (l >= 0.5){
+                $(".r_volume").css("background", "url(http://static.srv.c70.io/img/volume_hi.svg)");
+            }else if (l > 0){
+                $(".r_volume").css("background", "url(http://static.srv.c70.io/img/volume_low.svg)");
+            }
+        },
+
         changeCH: function(s){
             this.channel = s;
             this.playList('n');
@@ -54,7 +102,6 @@ var new_DBR = {
             this.el = document.getElementById('fm-player');
             this.wrap = $('div.player-wrap').html('加载中...');
 
-            this.volume = 0.5;
             this.playList('n', 0);
         },
 
@@ -68,6 +115,7 @@ var new_DBR = {
                     this.playList('p', s);
                 }
         },
+
 
 
         playSound: function () {
@@ -95,8 +143,11 @@ var new_DBR = {
             var rightPanel = "<span class=\"artist\">" + song.artist +"</span>";
             rightPanel +=  "<span class=\"album\">&lt; " + song.albumtitle + " &gt; " +  song.public_time + "</span>";
             rightPanel +=  "<span class=\"title\">" + song.title + "</span>";
-            rightPanel +=  "<div id='defaultbar'><div id='progress'></div></div>"
-            rightPanel +=  "<span class='r_time'></span>"
+            rightPanel +=  "<div id='defaultbar'><div id='progress'></div></div>";
+            rightPanel +=  "<div id='volume'><span class='r_volume'></span><div id='v_defaultbar'>";
+            rightPanel +=  "<div id='v_progress'></div></div></div>";
+            rightPanel +=  "<span class='r_time'>-0:00</span><span id='v_volume' class='r_volume'></span>";
+            
             var cPanel ="";
             if (song.like) {
                 cPanel += '<div class="staron"></div>';
@@ -109,7 +160,36 @@ var new_DBR = {
             html += '<div id="p"><div class="pause"></div></div>';
             html += '<div id="r">'+rightPanel+'</div>';
             html += '<div id="c">'+cPanel+'</div>';
+            html += "<div id='xx'></div>";
             this.wrap.html(html);
+            this.init_volume();
+
+            $("#volume").mouseleave(function (){
+                $("#volume").hide();
+            });
+
+            $("#v_volume").mouseover(function (){
+                $("#volume").show();
+            });
+
+            $("#v_defaultbar").click(function(e) {
+                posX = $(this).offset().left;
+                l = e.pageX - posX;
+                $("#v_progress").width(e.pageX - posX);
+                that.set_volume(l/50);
+            });
+
+            $("#v_progress").click(function(e) {
+                posX = $(this).offset().left;
+                l = e.pageX - posX;
+                $(this).width(e.pageX - posX);
+                that.set_volume(l/50);
+            });
+
+            $("#volume").find(".r_volume").click(function () {
+                $("#v_progress").width(0);
+                that.set_volume(0);
+            });
 
             $("#next_song").click( function() {
                 that.reportNext(song.sid);
@@ -148,7 +228,6 @@ var new_DBR = {
             this.el.mp3 = new Audio(soundfile);
             this.el.mp3.volume = this.volume;
             this.el.mp3.play();
-            var mp3 = this.el.mp3;
             processbar = setInterval(this.updatebar, 500);
             $(this.el.mp3).bind('ended', function () {
                 that.reportEnd(song.sid);
@@ -282,6 +361,8 @@ var new_DBR = {
         },
 
         init_act:function (){
+            //window = $(window);
+            //console.log(window);
             if(typeof window.DBR !== 'undefined'){
                 //hack the act function.
                 window.DBR.act = window.new_DBR.act;
@@ -298,9 +379,34 @@ var new_DBR = {
             }
         }
     };
+    //window = $(window);
     window.doubanfm = doubanfmhtml5;
     window.new_DBR = new_DBR;
     //start
     window.doubanfm.init_act();
-
+    //return doubanfm;
 })();
+
+/*
+    <a href="http://music.douban.com/subject/1427941/">
+        <img class="cover" src="http://img3.douban.com/lpic/s1966952.jpg"></a>
+        <div id="m" style="display: block;">
+            <span class="play">Continue &gt;</span>
+        </div>
+        <div id="p">
+            <div class="pause"></div>
+        </div>
+        <div id="r">
+            <span class="artist">梁静茹</span>
+            <span class="album">&lt; 丝路 &gt; 2005</span>
+            <span class="title">可惜不是你</span>
+            <div id="defaultbar"><div id="progress" style="width: 2px;"></div></div>
+            <div id="volume" style="display: none;"><span class="r_volume"></span><div id="v_defaultbar"><div id="v_progress"></div></div></div>
+            <span class="r_time">-4:43</span><span id="v_volume" class="r_volume"></span>
+        </div>
+        <div id="c">
+            <div class="staroff"></div>
+            <div class="trash"></div>
+            <div id="next_song" class="next"></div>
+        </div>
+ */

@@ -34,6 +34,10 @@ return {
             self.save_config(result);
         });
     },
+
+    window: function() {
+        return window;
+    }
 }
 
 });

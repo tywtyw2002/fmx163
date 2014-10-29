@@ -10,11 +10,12 @@ var send_message_to_douban_tab = function(request) {
         var tab_id = result[SKEY_FM_TAB_ID];
         chrome.tabs.sendMessage(tab_id, request);
     });
-}
+};
+
 
 
 var listen_events = function(){
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         if (request.type === 'fm_inited') {
             // Save douban fm tab id
             var data = {}
@@ -22,18 +23,24 @@ var listen_events = function(){
             chrome.storage.local.set(data);
             // Refresh extension config file
             refresh_config();
-        } else if (request.type === 'play_new_song') {
+        } else if (request.type === 'query') {
             var song = request.song;
             var _do_play = function(index) {
                 var current_source = ENABLED_SOURCES[index];
                 if (current_source === 'douban') {
                     send_message_to_douban_tab({type: 'fm_play_raw_mp3'});
+                    //sendResponse({type: 'fm_play_raw_mp3'});
                     return
+                    //return {type: 'fm_play_raw_mp3'};
                 }
                 var controller = SOURCE_CONTROLLERS[current_source];
                 controller && controller.query(song, function(result) {
                     if (result) {
-                        send_message_to_douban_tab({type: 'fm_play_new_song', song: result});
+                        console.log({type: 'song_url', song: result});
+                        send_message_to_douban_tab({type: 'song_url', song: result});
+                        //return {type: 'fm_play_new_song', song: result};
+                        
+                        //send_message_to_douban_tab({type: 'fm_play_new_song', song: result});
                     } else {
                         return _do_play(index + 1);
                     }
@@ -42,7 +49,40 @@ var listen_events = function(){
             _do_play(0);
         }
     });
+
 };
+
+
+// var listen_events = function(){
+//     chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+//         if (request.type === 'fm_inited') {
+//             // Save douban fm tab id
+//             var data = {}
+//             data[SKEY_FM_TAB_ID] = sender.tab.id;
+//             chrome.storage.local.set(data);
+//             // Refresh extension config file
+//             refresh_config();
+//         } else if (request.type === 'play_new_song') {
+//             var song = request.song;
+//             var _do_play = function(index) {
+//                 var current_source = ENABLED_SOURCES[index];
+//                 if (current_source === 'douban') {
+//                     send_message_to_douban_tab({type: 'fm_play_raw_mp3'});
+//                     return
+//                 }
+//                 var controller = SOURCE_CONTROLLERS[current_source];
+//                 controller && controller.query(song, function(result) {
+//                     if (result) {
+//                         send_message_to_douban_tab({type: 'fm_play_new_song', song: result});
+//                     } else {
+//                         return _do_play(index + 1);
+//                     }
+//                 });
+//             };
+//             _do_play(0);
+//         }
+//     });
+// };
 
 
 var ENABLED_SOURCES;
@@ -57,7 +97,7 @@ var refresh_config = function() {
         ENABLED_SOURCES = current_config.sources;
         ENABLED_SOURCES.push('douban');
     });
-}
+};
 
 
 config.load_config(function(current_config){
@@ -66,6 +106,9 @@ config.load_config(function(current_config){
     listen_events();
 });
 
+
+var controller = SOURCE_CONTROLLERS["163"];
+$(window).controller = controller;
 
 // Spoot `Referrer` header for request to 163 and baidu
 var sites_need_spoot_referrer = [
@@ -81,7 +124,7 @@ var sites_need_spoot_referrer = [
         'referrer': 'http://play.baidu.com/',
         'urls': ["*://play.baidu.com/*"]
     }
-]
+];
 
 $.each(sites_need_spoot_referrer, function(i, obj){
     chrome.webRequest.onBeforeSendHeaders.addListener(
@@ -95,7 +138,7 @@ $.each(sites_need_spoot_referrer, function(i, obj){
                 }
             }
             if (!referrer_header_found) {
-                details.requestHeaders.push({'name': 'Referer', 'value': obj.referrer})
+                details.requestHeaders.push({'name': 'Referer', 'value': obj.referrer});
             }
             return {requestHeaders: details.requestHeaders};
         },
